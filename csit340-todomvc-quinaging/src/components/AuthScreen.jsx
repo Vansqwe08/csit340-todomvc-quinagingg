@@ -52,22 +52,22 @@ function AuthScreen({ onLogin }) {
         </a>
 
         <div className="auth-story">
-          <p className="auth-eyebrow"><span /> A LITTLE SPACE FOR YOU</p>
-          <h1>Make today<br />feel a little <span>lighter.</span></h1>
+          <p className="auth-eyebrow"><span /> YOUR STUDY SPACE</p>
+          <h1>Make learning<br />feel a little <span>lighter.</span></h1>
           <p className="auth-story-copy">
-            Find your focus, take things one step at a time, and make room for what matters.
+            Plan your study tasks, focus in short sprints, and celebrate every step forward.
           </p>
           <div className="auth-preview" aria-hidden="true">
             <div className="preview-sparkle">✳</div>
-            <p className="preview-label">TODAY, AT YOUR PACE</p>
-            <div className="preview-line"><span className="preview-check">✓</span><span>Make time for a quiet moment</span></div>
-            <div className="preview-line"><span className="preview-check">✓</span><span>Focus on one good thing</span></div>
-            <div className="preview-line preview-muted"><span className="preview-empty" /><span>Let the rest wait</span></div>
+            <p className="preview-label">A LITTLE PROGRESS, EVERY DAY</p>
+            <div className="preview-line"><span className="preview-check">✓</span><span>Review your biology notes</span></div>
+            <div className="preview-line"><span className="preview-check">✓</span><span>Practice a few math problems</span></div>
+            <div className="preview-line preview-muted"><span className="preview-empty" /><span>Take a well-earned break</span></div>
             <div className="preview-progress"><span /></div>
           </div>
         </div>
 
-        <p className="auth-showcase-footer">A calmer way to get things done.</p>
+        <p className="auth-showcase-footer">A calmer way to make learning happen.</p>
         <span className="auth-orb auth-orb-one" aria-hidden="true" />
         <span className="auth-orb auth-orb-two" aria-hidden="true" />
       </section>

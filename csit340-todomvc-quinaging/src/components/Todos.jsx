@@ -1,12 +1,66 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const filters = ['All tasks', 'In progress', 'Completed']
+const subjects = ['Mathematics', 'Science', 'Reading', 'Writing', 'History', 'Other']
+const focusLengths = [15, 25, 45]
+const tasksStorageKey = 'daylight-study-tasks'
+const statsStorageKey = 'daylight-study-stats'
+
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function readStoredValue(key, fallback) {
+  const storedValue = localStorage.getItem(key)
+  return storedValue ? JSON.parse(storedValue) : fallback
+}
 
 function Todos({ onLogout }) {
   const [text, setText] = useState('')
+  const [subject, setSubject] = useState(subjects[0])
+  const [dueDate, setDueDate] = useState('')
   const [filter, setFilter] = useState('All tasks')
   const [query, setQuery] = useState('')
-  const [todos, setTodos] = useState([])
+  const [subjectFilter, setSubjectFilter] = useState('All subjects')
+  const [todos, setTodos] = useState(() => readStoredValue(tasksStorageKey, []))
+  const [focusStats, setFocusStats] = useState(() =>
+    readStoredValue(statsStorageKey, { sessions: 0, minutes: 0 }),
+  )
+  const [focusLength, setFocusLength] = useState(25)
+  const [secondsRemaining, setSecondsRemaining] = useState(25 * 60)
+  const secondsRemainingRef = useRef(25 * 60)
+  const [isFocusRunning, setIsFocusRunning] = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem(tasksStorageKey, JSON.stringify(todos))
+  }, [todos])
+
+  useEffect(() => {
+    localStorage.setItem(statsStorageKey, JSON.stringify(focusStats))
+  }, [focusStats])
+
+  useEffect(() => {
+    if (!isFocusRunning) return undefined
+
+    const timerId = window.setInterval(() => {
+      const nextRemaining = Math.max(secondsRemainingRef.current - 1, 0)
+      secondsRemainingRef.current = nextRemaining
+      setSecondsRemaining(nextRemaining)
+
+      if (nextRemaining === 0) {
+        setIsFocusRunning(false)
+        setFocusStats((stats) => ({
+          sessions: stats.sessions + 1,
+          minutes: stats.minutes + focusLength,
+        }))
+      }
+    }, 1000)
+
+    return () => window.clearInterval(timerId)
+  }, [focusLength, isFocusRunning])
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -16,9 +70,16 @@ function Todos({ onLogout }) {
 
     setTodos((currentTodos) => [
       ...currentTodos,
-      { id: crypto.randomUUID(), text: trimmed, completed: false },
+      {
+        id: crypto.randomUUID(),
+        text: trimmed,
+        subject,
+        dueDate,
+        completed: false,
+      },
     ])
     setText('')
+    setDueDate('')
   }
 
   function handleToggle(id) {
@@ -44,9 +105,30 @@ function Todos({ onLogout }) {
     setTodos((currentTodos) => currentTodos.filter((todo) => !todo.completed))
   }
 
+  function selectFocusLength(minutes) {
+    setFocusLength(minutes)
+    secondsRemainingRef.current = minutes * 60
+    setSecondsRemaining(minutes * 60)
+  }
+
+  function toggleFocusTimer() {
+    if (secondsRemaining === 0) {
+      secondsRemainingRef.current = focusLength * 60
+      setSecondsRemaining(focusLength * 60)
+    }
+    setIsFocusRunning((running) => !running)
+  }
+
+  function resetFocusTimer() {
+    setIsFocusRunning(false)
+    secondsRemainingRef.current = focusLength * 60
+    setSecondsRemaining(focusLength * 60)
+  }
+
   const activeCount = todos.filter((todo) => !todo.completed).length
   const completedCount = todos.length - activeCount
   const completion = todos.length ? Math.round((completedCount / todos.length) * 100) : 0
+  const availableSubjects = [...new Set(todos.map((todo) => todo.subject).filter(Boolean))]
   const visibleTodos = todos.filter((todo) => {
     const matchesFilter =
       filter === 'In progress'
@@ -55,8 +137,14 @@ function Todos({ onLogout }) {
           ? todo.completed
           : true
 
-    return matchesFilter && todo.text.toLowerCase().includes(query.trim().toLowerCase())
+    const matchesSubject = subjectFilter === 'All subjects' || todo.subject === subjectFilter
+    const searchableText = `${todo.text} ${todo.subject || ''}`.toLowerCase()
+
+    return matchesFilter && matchesSubject && searchableText.includes(query.trim().toLowerCase())
   })
+  const timerMinutes = String(Math.floor(secondsRemaining / 60)).padStart(2, '0')
+  const timerSeconds = String(secondsRemaining % 60).padStart(2, '0')
+  const timerProgress = (secondsRemaining / (focusLength * 60)) * 100
 
   const dateLabel = new Intl.DateTimeFormat('en', {
     weekday: 'long',
@@ -95,9 +183,9 @@ function Todos({ onLogout }) {
 
       <section className="welcome">
         <div>
-          <p className="eyebrow"><span className="eyebrow-dot" /> YOUR PERSONAL SPACE</p>
-          <h1>Make room for <span>good things.</span></h1>
-          <p className="welcome-copy">A little progress adds up. What would you like to focus on today?</p>
+          <p className="eyebrow"><span className="eyebrow-dot" /> YOUR STUDY SPACE</p>
+          <h1>Small steps, <span>big learning.</span></h1>
+          <p className="welcome-copy">Build a study rhythm that works for you. What will you learn today?</p>
         </div>
         <div className="welcome-art" aria-hidden="true">
           <span className="art-sun" />
@@ -113,8 +201,8 @@ function Todos({ onLogout }) {
         <section className="task-card" aria-label="Your tasks">
           <div className="card-heading">
             <div>
-              <p className="section-kicker">THE PLAN</p>
-              <h2>Your tasks <span className="task-total">{todos.length}</span></h2>
+              <p className="section-kicker">YOUR LEARNING PLAN</p>
+              <h2>Study tasks <span className="task-total">{todos.length}</span></h2>
             </div>
             {todos.length > 0 && (
               <button
@@ -141,10 +229,29 @@ function Todos({ onLogout }) {
               aria-label="Add a task"
               value={text}
               onChange={(event) => setText(event.target.value)}
-              placeholder="Add a task to your day..."
+              placeholder="What would you like to study?"
               maxLength={180}
             />
             <button type="submit" disabled={!text.trim()}>Add task</button>
+            <div className="add-options">
+              <label>
+                <span className="sr-only">Subject</span>
+                <select value={subject} onChange={(event) => setSubject(event.target.value)} aria-label="Choose a subject">
+                  {subjects.map((option) => <option key={option}>{option}</option>)}
+                </select>
+              </label>
+              <label className="due-date-input">
+                <span className="sr-only">Optional due date</span>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                  aria-label="Optional due date"
+                  min={getLocalDateString()}
+                />
+              </label>
+              <span className="add-hint">Add a subject and optional due date</span>
+            </div>
           </form>
 
           <div className="task-toolbar">
@@ -164,6 +271,15 @@ function Todos({ onLogout }) {
                 </button>
               ))}
             </div>
+            {availableSubjects.length > 1 && (
+              <label className="subject-filter">
+                <span className="sr-only">Filter by subject</span>
+                <select value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)} aria-label="Filter by subject">
+                  <option>All subjects</option>
+                  {availableSubjects.map((option) => <option key={option}>{option}</option>)}
+                </select>
+              </label>
+            )}
             {todos.length > 0 && (
               <label className="search-box">
                 <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -198,7 +314,17 @@ function Todos({ onLogout }) {
                       </svg>
                     )}
                   </button>
-                  <span className="task-text">{todo.text}</span>
+                  <span className="task-content">
+                    <span className="task-text">{todo.text}</span>
+                    <span className="task-details">
+                      {todo.subject && <span className="subject-tag">{todo.subject}</span>}
+                      {todo.dueDate && (
+                        <time className={todo.dueDate < getLocalDateString() && !todo.completed ? 'task-due overdue' : 'task-due'} dateTime={todo.dueDate}>
+                          Due {new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(`${todo.dueDate}T00:00:00`))}
+                        </time>
+                      )}
+                    </span>
+                  </span>
                   <button
                     className="delete-task"
                     type="button"
@@ -283,11 +409,55 @@ function Todos({ onLogout }) {
             </div>
           </section>
 
+          <section className="focus-card" aria-label="Study focus timer">
+            <div className="focus-heading">
+              <div>
+                <p className="section-kicker">FOCUS MODE</p>
+                <h2>Study sprint</h2>
+              </div>
+              <span className="focus-session-count">{focusStats.sessions} done</span>
+            </div>
+            <div
+              className="focus-timer"
+              role="timer"
+              aria-label={`${timerMinutes} minutes and ${timerSeconds} seconds remaining`}
+              style={{ '--timer-progress': `${timerProgress}%` }}
+            >
+              <div className="focus-timer-inner">
+                <span>{timerMinutes}:{timerSeconds}</span>
+                <small>{isFocusRunning ? 'FOCUSING' : 'READY WHEN YOU ARE'}</small>
+              </div>
+            </div>
+            <div className="focus-presets" aria-label="Focus session length">
+              {focusLengths.map((minutes) => (
+                <button
+                  type="button"
+                  key={minutes}
+                  className={focusLength === minutes ? 'focus-preset active' : 'focus-preset'}
+                  onClick={() => selectFocusLength(minutes)}
+                  disabled={isFocusRunning}
+                  aria-pressed={focusLength === minutes}
+                >
+                  {minutes} min
+                </button>
+              ))}
+            </div>
+            <div className="focus-actions">
+              <button type="button" className="focus-start" onClick={toggleFocusTimer}>
+                {isFocusRunning ? 'Pause session' : secondsRemaining === 0 ? 'Start again' : 'Start focus'}
+              </button>
+              <button type="button" className="focus-reset" onClick={resetFocusTimer} aria-label="Reset focus timer">
+                Reset
+              </button>
+            </div>
+            <p className="focus-total">{focusStats.minutes} focused minutes in total</p>
+          </section>
+
           <section className="note-card">
             <span className="note-sparkle" aria-hidden="true">✳</span>
-            <p className="note-label">A GENTLE REMINDER</p>
-            <p className="note-quote">“You don’t have to do it all. Just the next thing.”</p>
-            <span className="note-signoff">ONE STEP AT A TIME</span>
+            <p className="note-label">A STUDY TIP</p>
+            <p className="note-quote">“Try explaining what you’ve learned in your own words.”</p>
+            <span className="note-signoff">TEACH IT TO REMEMBER IT</span>
           </section>
         </aside>
       </div>
