@@ -3,10 +3,6 @@
   "workspaces": [
     "csit340-todomvc-quinaging"
   ],
-  "dependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "tailwindcss": "^4.3.3"
-  },
   "scripts": {
     "dev": "npm --prefix ./csit340-todomvc-quinaging run dev"
   }
