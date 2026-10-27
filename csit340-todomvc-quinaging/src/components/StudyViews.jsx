@@ -171,4 +171,83 @@ function SettingsView({ theme, onToggleTheme, name, onNameChange }) {
   )
 }
 
-export { AnalyticsView, CalendarView, SettingsView }
+function ProfileView({ profile, onProfileChange, onPhotoChange, photoError }) {
+  const initials = profile.name.trim().charAt(0).toUpperCase() || 'D'
+
+  function updateField(event) {
+    onProfileChange({ ...profile, [event.target.name]: event.target.value })
+  }
+
+  return (
+    <section className="view-card profile-view" aria-labelledby="profile-title">
+      <div className="view-heading">
+        <div>
+          <p className="section-kicker">YOUR SPACE</p>
+          <h2 id="profile-title">Your profile</h2>
+          <p>Update your details and add a photo so your study space feels like yours.</p>
+        </div>
+      </div>
+
+      <div className="profile-photo-section">
+        <div className="profile-photo">
+          {profile.photo
+            ? <img src={profile.photo} alt={`${profile.name || 'Your'} profile`} />
+            : <span aria-hidden="true">{initials}</span>}
+        </div>
+        <div className="profile-photo-copy">
+          <strong>Your profile picture</strong>
+          <span>JPG, PNG, or WebP. Maximum file size: 1 MB.</span>
+          <div className="profile-photo-actions">
+            <label className="photo-upload-button">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={onPhotoChange}
+                aria-label="Upload profile picture"
+              />
+              Upload photo
+            </label>
+            {profile.photo && (
+              <button type="button" className="photo-remove-button" onClick={() => onProfileChange({ ...profile, photo: '' })}>
+                Remove
+              </button>
+            )}
+          </div>
+          {photoError && <p className="profile-photo-error" role="alert">{photoError}</p>}
+        </div>
+      </div>
+
+      <form className="profile-form" onSubmit={(event) => event.preventDefault()}>
+        <label>
+          <span>Full name</span>
+          <input name="name" value={profile.name} onChange={updateField} maxLength={50} autoComplete="name" placeholder="Your name" />
+        </label>
+        <label>
+          <span>Email address</span>
+          <input name="email" type="email" value={profile.email} onChange={updateField} maxLength={120} autoComplete="email" placeholder="you@example.com" />
+        </label>
+        <label>
+          <span>Phone number</span>
+          <input name="phone" type="tel" value={profile.phone} onChange={updateField} maxLength={30} autoComplete="tel" placeholder="+1 (555) 000-0000" />
+        </label>
+        <label>
+          <span>School or institution</span>
+          <input name="school" value={profile.school} onChange={updateField} maxLength={100} autoComplete="organization" placeholder="Your school or institution" />
+        </label>
+        <label className="profile-form-wide">
+          <span>Program or area of study</span>
+          <input name="program" value={profile.program} onChange={updateField} maxLength={100} placeholder="e.g. Computer science" />
+        </label>
+        <label className="profile-form-wide">
+          <span>About you</span>
+          <textarea name="about" value={profile.about} onChange={updateField} maxLength={280} rows={4} placeholder="A little about your learning goals..." />
+          <small>{profile.about.length}/280</small>
+        </label>
+      </form>
+
+      <p className="profile-save-note"><span aria-hidden="true">✓</span> Your profile is saved privately in this browser.</p>
+    </section>
+  )
+}
+
+export { AnalyticsView, CalendarView, ProfileView, SettingsView }

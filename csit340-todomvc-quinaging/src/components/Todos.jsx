@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import AmbientPlayer from './AmbientPlayer.jsx'
 import StudyTaskDrawer from './StudyTaskDrawer.jsx'
-import { AnalyticsView, CalendarView, SettingsView } from './StudyViews.jsx'
+import { AnalyticsView, CalendarView, ProfileView, SettingsView } from './StudyViews.jsx'
 
 const filters = ['All tasks', 'In progress', 'Completed']
 const subjects = ['Mathematics', 'Science', 'Reading', 'Writing', 'History', 'Other']
@@ -25,11 +25,22 @@ const tasksStorageKey = 'daylight-study-tasks'
 const statsStorageKey = 'daylight-study-stats'
 const streakStorageKey = 'daylight-study-streak'
 const nameStorageKey = 'daylight-study-name'
+const profileStorageKey = 'daylight-study-profile'
+const emptyProfile = {
+  name: '',
+  email: '',
+  phone: '',
+  school: '',
+  program: '',
+  about: '',
+  photo: '',
+}
 const navigationItems = [
   { id: 'home', label: 'Home', icon: '⌂' },
   { id: 'tasks', label: 'Tasks', icon: '☷' },
   { id: 'calendar', label: 'Calendar', icon: '▦' },
   { id: 'analytics', label: 'Analytics', icon: '◔' },
+  { id: 'profile', label: 'Profile', icon: '◉' },
   { id: 'settings', label: 'Settings', icon: '⚙' },
 ]
 
@@ -79,7 +90,16 @@ function Todos({ onLogout, theme, onToggleTheme }) {
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [celebrationKey, setCelebrationKey] = useState(0)
   const [activeTab, setActiveTab] = useState('home')
-  const [userName, setUserName] = useState(() => localStorage.getItem(nameStorageKey) || 'there')
+  const [profile, setProfile] = useState(() => {
+    const savedProfile = readStoredValue(profileStorageKey, {})
+    return {
+      ...emptyProfile,
+      ...savedProfile,
+      name: savedProfile.name || localStorage.getItem(nameStorageKey) || '',
+    }
+  })
+  const [userName, setUserName] = useState(() => profile.name || localStorage.getItem(nameStorageKey) || 'there')
+  const [photoError, setPhotoError] = useState('')
   const timerDuration = timerPhase === 'focus' ? focusLength : breakLength
 
   useEffect(() => {
@@ -346,6 +366,49 @@ function Todos({ onLogout, theme, onToggleTheme }) {
     const nextName = value.trim() ? value : ''
     setUserName(nextName)
     localStorage.setItem(nameStorageKey, nextName)
+    updateProfile({ ...profile, name: value })
+  }
+
+  function updateProfile(nextProfile) {
+    setProfile(nextProfile)
+    if (nextProfile.name !== profile.name) {
+      const nextName = nextProfile.name.trim()
+      setUserName(nextName || 'there')
+      localStorage.setItem(nameStorageKey, nextName)
+    }
+    try {
+      localStorage.setItem(profileStorageKey, JSON.stringify(nextProfile))
+      setPhotoError('')
+    } catch {
+      setPhotoError('Profile could not be saved in this browser. Try a smaller picture or remove the current photo.')
+    }
+  }
+
+  function handlePhotoChange(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setPhotoError('Choose a JPG, PNG, or WebP image.')
+      return
+    }
+    if (file.size > 1024 * 1024) {
+      setPhotoError('Choose an image smaller than 1 MB.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        setPhotoError('This image could not be read. Please choose another one.')
+        return
+      }
+
+      updateProfile({ ...profile, photo: reader.result })
+    }
+    reader.onerror = () => setPhotoError('This image could not be read. Please choose another one.')
+    reader.readAsDataURL(file)
   }
 
   const dateLabel = new Intl.DateTimeFormat('en', {
@@ -391,7 +454,11 @@ function Todos({ onLogout, theme, onToggleTheme }) {
           <small>KEEP GOING</small>
         </div>
         <div className="sidebar-profile">
-          <span className="profile-avatar">{(userName.trim().charAt(0) || 'D').toUpperCase()}</span>
+          <span className="profile-avatar">
+            {profile.photo
+              ? <img src={profile.photo} alt="" />
+              : (userName.trim().charAt(0) || 'D').toUpperCase()}
+          </span>
           <span><strong>{userName.trim() || 'Daylight learner'}</strong><small>Learning at your pace</small></span>
         </div>
       </aside>
@@ -766,6 +833,8 @@ function Todos({ onLogout, theme, onToggleTheme }) {
         <CalendarView todos={todos} onOpenTask={setSelectedTaskId} />
       ) : activeTab === 'analytics' ? (
         <AnalyticsView todos={todos} focusStats={focusStats} streakDays={displayedStreak} />
+      ) : activeTab === 'profile' ? (
+        <ProfileView profile={profile} onProfileChange={updateProfile} onPhotoChange={handlePhotoChange} photoError={photoError} />
       ) : (
         <SettingsView theme={theme} onToggleTheme={onToggleTheme} name={userName} onNameChange={updateUserName} />
       )}
