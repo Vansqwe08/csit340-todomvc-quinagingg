@@ -1,135 +1,298 @@
-import { useState } from "react";
+import { useState } from 'react'
 
-function Todos(){
-    const [text, setText] = useState('')
-    const [filter, setFilter] = useState('All')
-    const [todos, setTodos] = useState([]) 
+const filters = ['All tasks', 'In progress', 'Completed']
 
-    function handleSubmit(e) {
-        e.preventDefault()
-        const trimmed = text.trim()
-        if (trimmed === '') {
-            return
-    }
-        const newTodo = { id: crypto.randomUUID(), text: trimmed, completed: false }
-        setTodos([...todos, newTodo])
-        setText('')
-    } 
+function Todos({ onLogout }) {
+  const [text, setText] = useState('')
+  const [filter, setFilter] = useState('All tasks')
+  const [query, setQuery] = useState('')
+  const [todos, setTodos] = useState([])
 
-    function handleToggle(id) {
-        setTodos(
-            todos.map((todo) =>
-                todo.id === id ? { ...todo, completed: !todo.completed } : todo
-            )
-        )
-    }
+  function handleSubmit(event) {
+    event.preventDefault()
+    const trimmed = text.trim()
 
-    function handleDelete(id) {
-        setTodos(todos.filter((todo) => todo.id !== id))
-    }
-    const activeCount = todos.filter((todo) => !todo.completed).length
-    const completedCount = todos.length - activeCount
+    if (!trimmed) return
+
+    setTodos((currentTodos) => [
+      ...currentTodos,
+      { id: crypto.randomUUID(), text: trimmed, completed: false },
+    ])
+    setText('')
+  }
+
+  function handleToggle(id) {
+    setTodos((currentTodos) =>
+      currentTodos.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      ),
+    )
+  }
+
+  function handleDelete(id) {
+    setTodos((currentTodos) => currentTodos.filter((todo) => todo.id !== id))
+  }
+
+  function handleToggleAll() {
     const allCompleted = todos.length > 0 && todos.every((todo) => todo.completed)
+    setTodos((currentTodos) =>
+      currentTodos.map((todo) => ({ ...todo, completed: !allCompleted })),
+    )
+  }
 
-    const visibleTodos = todos.filter((todo) => {
-        if (filter === "Active") return !todo.completed
-        if (filter === "Completed") return todo.completed
-        return true
-    })
+  function handleClearCompleted() {
+    setTodos((currentTodos) => currentTodos.filter((todo) => !todo.completed))
+  }
 
-    function handleToggleAll() {
-        setTodos(todos.map((todo) => ({ ...todo, completed: !allCompleted })))
-    }
+  const activeCount = todos.filter((todo) => !todo.completed).length
+  const completedCount = todos.length - activeCount
+  const completion = todos.length ? Math.round((completedCount / todos.length) * 100) : 0
+  const visibleTodos = todos.filter((todo) => {
+    const matchesFilter =
+      filter === 'In progress'
+        ? !todo.completed
+        : filter === 'Completed'
+          ? todo.completed
+          : true
 
-    function handleClearCompleted() {
-        setTodos(todos.filter((todo) => !todo.completed))
-    }
+    return matchesFilter && todo.text.toLowerCase().includes(query.trim().toLowerCase())
+  })
 
-    return(
-        <section className="mx-auto max-w-[550px]">
-            <h1 className="text-center text-[80px] font-extralight text-[#b83f45]">todos</h1>
-            <div className="relative bg-white shadow-[0_2px_4px_0_rgba(0,0,0,0.2),0_25px_50px_0_rgba(0,0,0,0.1)]">
-                <form onSubmit={handleSubmit}>
-                    <input
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        className="h-[65px] w-full py-4 pr-4 pl-[60px] text-2xl shadow-[inset_0_-2px_1px_rgba(0,0,0,0.03)] outline-none placeholder:text-black/40 placeholder:italic focus:shadow-[0_0_2px_2px_#cf7d7d]"
-                        placeholder="What needs to be done?"
-                    />
-                </form>
-                {todos.length > 0 && (
-                    <>
-        <main className="relative border-t border-[#e6e6e6]">
+  const dateLabel = new Intl.DateTimeFormat('en', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  }).format(new Date())
+
+  return (
+    <main className="planner">
+      <header className="topbar">
+        <a className="brand" href="#" aria-label="Daylight home">
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" fill="none">
+              <path d="M16 5.5c-1.6 4.1-5.8 5-5.8 10.1a5.8 5.8 0 1 0 11.6 0C21.8 10.5 17.6 9.6 16 5.5Z" fill="currentColor" />
+              <path d="M15.9 18.4c-2.6.1-4.1 1.8-4.4 4.1 2.8-.1 4.4-1.5 4.4-4.1Zm.2 0c2.6.1 4.1 1.8 4.4 4.1-2.8-.1-4.4-1.5-4.4-4.1Z" fill="#fff" />
+            </svg>
+          </span>
+          <span>daylight<span className="brand-period">.</span></span>
+        </a>
+        <div className="topbar-actions">
+          <div className="date-chip">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="3.1" y="4.7" width="13.8" height="12" rx="2.1" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M6.5 3v3.2M13.5 3v3.2M3.3 8.2h13.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <span>{dateLabel}</span>
+          </div>
+          <button type="button" className="logout-button" onClick={onLogout}>
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M8.2 4.2H5.4c-.7 0-1.2.5-1.2 1.2v9.2c0 .7.5 1.2 1.2 1.2h2.8m4-2.8 3-3-3-3m3 3H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Sign out</span>
+          </button>
+        </div>
+      </header>
+
+      <section className="welcome">
+        <div>
+          <p className="eyebrow"><span className="eyebrow-dot" /> YOUR PERSONAL SPACE</p>
+          <h1>Make room for <span>good things.</span></h1>
+          <p className="welcome-copy">A little progress adds up. What would you like to focus on today?</p>
+        </div>
+        <div className="welcome-art" aria-hidden="true">
+          <span className="art-sun" />
+          <span className="art-orbit orbit-one" />
+          <span className="art-orbit orbit-two" />
+          <span className="art-leaf leaf-one" />
+          <span className="art-leaf leaf-two" />
+          <span className="art-leaf leaf-three" />
+        </div>
+      </section>
+
+      <div className="workspace">
+        <section className="task-card" aria-label="Your tasks">
+          <div className="card-heading">
+            <div>
+              <p className="section-kicker">THE PLAN</p>
+              <h2>Your tasks <span className="task-total">{todos.length}</span></h2>
+            </div>
+            {todos.length > 0 && (
+              <button
+                type="button"
+                className="complete-all-button"
+                onClick={handleToggleAll}
+                aria-label={activeCount ? 'Mark all tasks complete' : 'Mark all tasks active'}
+              >
+                {activeCount ? 'Complete all' : 'Undo all'}
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="m5 10 3.2 3.2L15.5 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <form className="add-form" onSubmit={handleSubmit}>
+            <span className="add-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
+            </span>
             <input
-                id="toggle-all"
-                type="checkbox"
-                checked={allCompleted}
-                onChange={handleToggleAll}
-                className="peer sr-only"
+              aria-label="Add a task"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="Add a task to your day..."
+              maxLength={180}
             />
-            <label
-                htmlFor="toggle-all"
-                className="absolute -top-[66px] left-0 flex h-[65px] w-[60px] cursor-pointer items-center justify-center text-[22px] text-[#949494] peer-checked:text-[#484848]">
-            <span className="rotate-90">❯</span>
-          </label>
-          <ul>
-            {visibleTodos.map((todo) => (
-                <li
-                    key={todo.id}
-                    className="group relative flex items-center border-b border-[#ededed] text-2xl">     
-                  <input
-                   type="checkbox"
-                   checked={todo.completed}
-                   onChange={() => handleToggle(todo.id)}
-                   className="ml-[15px] size-[30px] shrink-0 cursor-pointer accent-[#59a193]"/>
-                 <span
-                    className={
-                         todo.completed
-                            ? 'flex-1 py-[15px] pr-[60px] pl-[15px] break-all text-[#949494] line-through'
-                            : 'flex-1 py-[15px] pr-[60px] pl-[15px] break-all'
-                            }
-                           >{todo.text}
-                    </span> 
-                 <button
-                   type="button"
-                   onClick={() => handleDelete(todo.id)}
-                  className="absolute right-[10px] hidden size-10 cursor-pointer text-[30px] text-[#949494] group-hover:block hover:text-[#c18585]"> x
-                 </button>
-              </li>
-            ))}
+            <button type="submit" disabled={!text.trim()}>Add task</button>
+          </form>
+
+          <div className="task-toolbar">
+            <div className="filter-tabs" role="group" aria-label="Filter tasks">
+              {filters.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className={filter === option ? 'filter-tab active' : 'filter-tab'}
+                  onClick={() => setFilter(option)}
+                  aria-pressed={filter === option}
+                >
+                  {option}
+                  {option === 'In progress' && activeCount > 0 && (
+                    <span className="filter-count">{activeCount}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {todos.length > 0 && (
+              <label className="search-box">
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <circle cx="8.8" cy="8.8" r="5.6" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="m13 13 3.7 3.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search"
+                  aria-label="Search tasks"
+                />
+              </label>
+            )}
+          </div>
+
+          {visibleTodos.length > 0 ? (
+            <ul className="task-list">
+              {visibleTodos.map((todo) => (
+                <li className={todo.completed ? 'task-item is-complete' : 'task-item'} key={todo.id}>
+                  <button
+                    className="task-check"
+                    type="button"
+                    onClick={() => handleToggle(todo.id)}
+                    aria-label={todo.completed ? `Mark ${todo.text} as active` : `Complete ${todo.text}`}
+                    aria-pressed={todo.completed}
+                  >
+                    {todo.completed && (
+                      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="m5 10 3.2 3.2L15.5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </button>
+                  <span className="task-text">{todo.text}</span>
+                  <button
+                    className="delete-task"
+                    type="button"
+                    onClick={() => handleDelete(todo.id)}
+                    aria-label={`Delete ${todo.text}`}
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                      <path d="M4.5 6.3h11M8 6.3V4.5h4v1.8m-6.1 0 .6 9.2h7l.6-9.2M8.2 9v4.2m3.6-4.2v4.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </li>
+              ))}
             </ul>
-        </main>
-            <footer className="grid h-10 grid-cols-3 items-center border-t border-[#e6e6e6] px-[15px] text-[15px]">
-              <span>
-               <strong className="font-light">{activeCount}</strong> {activeCount === 1 ? "item" : "items"} left </span>
-               <ul className="flex justify-center gap-1">
-                 {["All", "Active", "Completed"].map((option) => (
-                   <li key={option}>
-                     <button
-                       type="button"
-                       onClick={() => setFilter(option)}
-                       className={filter === option
-                         ? 'cursor-pointer rounded-[3px] border border-[#b83f45]/20 px-[7px] py-[3px]'
-                         : 'cursor-pointer rounded-[3px] border border-transparent px-[7px] py-[3px] hover:border-[#b83f45]/10'}>
-                       {option}
-                     </button>
-                   </li>
-                 ))}
-               </ul>
-             {completedCount > 0 && (
-               <button
-                 type="button"
-                 onClick={handleClearCompleted}
-                 className="cursor-pointer justify-self-end hover:underline">
-                 Clear completed
-               </button>
-             )}
-           </footer>
-           </>
+          ) : (
+            <div className="empty-state">
+              <span className="empty-illustration" aria-hidden="true">
+                {query || filter !== 'All tasks' ? (
+                  <svg viewBox="0 0 48 48" fill="none">
+                    <circle cx="21" cy="21" r="12" stroke="currentColor" strokeWidth="2.5" />
+                    <path d="m30 30 9 9M16 21h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 48 48" fill="none">
+                    <path d="m24 7 3.4 10.4L38 21l-10.6 3.5L24 35l-3.5-10.5L10 21l10.5-3.6L24 7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                    <path d="m37 30 1.7 5.3L44 37l-5.3 1.8L37 44l-1.8-5.2L30 37l5.2-1.7L37 30ZM12 5l1.5 4.5L18 11l-4.5 1.5L12 17l-1.5-4.5L6 11l4.5-1.5L12 5Z" fill="currentColor" />
+                  </svg>
                 )}
-       </div>
-</section>
-    );
+              </span>
+              <h3>{query || filter !== 'All tasks' ? 'Nothing to see here' : 'A fresh page'}</h3>
+              <p>
+                {query || filter !== 'All tasks'
+                  ? 'Try another search or switch to a different filter.'
+                  : 'Add your first task above and make today yours.'}
+              </p>
+            </div>
+          )}
+
+          {todos.length > 0 && (
+            <footer className="task-footer">
+              <span><strong>{activeCount}</strong> {activeCount === 1 ? 'task' : 'tasks'} left to go</span>
+              {completedCount > 0 && (
+                <button type="button" onClick={handleClearCompleted}>
+                  Clear completed <span>({completedCount})</span>
+                </button>
+              )}
+            </footer>
+          )}
+        </section>
+
+        <aside className="sidebar">
+          <section className="progress-card">
+            <div className="progress-topline">
+              <span className="progress-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 20s-7-3.7-7-9.2A3.8 3.8 0 0 1 12 9a3.8 3.8 0 0 1 7 1.8C19 16.3 12 20 12 20Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                  <path d="m9.2 13.2 1.8 1.8 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="progress-label">YOUR MOMENTUM</span>
+            </div>
+            <p className="progress-number">{completion}<span>%</span></p>
+            <p className="progress-caption">
+              {todos.length === 0
+                ? 'Your progress starts with one small step.'
+                : completedCount === todos.length
+                  ? 'Everything is done. Take a well-earned breath.'
+                  : `${completedCount} of ${todos.length} ${todos.length === 1 ? 'task' : 'tasks'} complete. Keep it going!`}
+            </p>
+            <div
+              className="progress-track"
+              role="progressbar"
+              aria-label="Tasks completed"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={completion}
+            >
+              <span style={{ width: `${completion}%` }} />
+            </div>
+            <div className="progress-legend">
+              <span><i className="legend-dot done-dot" /> Done <strong>{completedCount}</strong></span>
+              <span><i className="legend-dot todo-dot" /> To do <strong>{activeCount}</strong></span>
+            </div>
+          </section>
+
+          <section className="note-card">
+            <span className="note-sparkle" aria-hidden="true">✳</span>
+            <p className="note-label">A GENTLE REMINDER</p>
+            <p className="note-quote">“You don’t have to do it all. Just the next thing.”</p>
+            <span className="note-signoff">ONE STEP AT A TIME</span>
+          </section>
+        </aside>
+      </div>
+    </main>
+  )
 }
 
-export default Todos;
+export default Todos

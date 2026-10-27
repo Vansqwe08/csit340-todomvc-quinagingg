@@ -1,13 +1,22 @@
+import { useState } from 'react'
+import AuthScreen from './components/AuthScreen.jsx'
 import Todos from './components/Todos.jsx'
 import Info from './components/Info.jsx'
- 
-  function App() {
-    return (
-      <div className="min-h-screen bg-[#f5f5f5] py-8 font-light text-[#111]">
-        <Todos />
-        <Info name="Kris Van Ruzzel Quinaging" />
-    </div>
+import './App.css'
+
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  if (!isAuthenticated) {
+    return <AuthScreen onLogin={() => setIsAuthenticated(true)} />
+  }
+
+  return (
+    <>
+      <Todos onLogout={() => setIsAuthenticated(false)} />
+      <Info name="Kris Van Ruzzel Quinaging" />
+    </>
   )
 }
- 
+
 export default App
