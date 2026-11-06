@@ -26,6 +26,12 @@ const statsStorageKey = 'daylight-study-stats'
 const streakStorageKey = 'daylight-study-streak'
 const nameStorageKey = 'daylight-study-name'
 const profileStorageKey = 'daylight-study-profile'
+const scheduleStorageKey = 'daylight-weekly-schedule'
+const scheduleDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const scheduleTimelineStart = 7 * 60
+const scheduleTimelineEnd = 22 * 60
+const schedulePixelsPerHour = 72
+const scheduleTimelineHeight = ((scheduleTimelineEnd - scheduleTimelineStart) / 60) * schedulePixelsPerHour
 const emptyProfile = {
   name: '',
   email: '',
@@ -55,6 +61,25 @@ function weekStartsOnMonday(date) {
   return (date.getDay() + 6) % 7
 }
 
+function scheduleTimeToMinutes(time) {
+  if (!time) return 0
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+function formatScheduleTime(time) {
+  if (!time) return ''
+  const [hours, minutes] = time.split(':').map(Number)
+  const period = hours >= 12 ? 'PM' : 'AM'
+  const hour12 = hours % 12 || 12
+  return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`
+}
+
+function formatScheduleMinutes(minutes) {
+  const hours = Math.floor(minutes / 60)
+  return formatScheduleTime(`${String(hours).padStart(2, '0')}:00`)
+}
+
 function readStoredValue(key, fallback) {
   const storedValue = localStorage.getItem(key)
   return storedValue ? JSON.parse(storedValue) : fallback
@@ -73,6 +98,13 @@ function Todos({ onLogout, theme, onToggleTheme }) {
   const [query, setQuery] = useState('')
   const [subjectFilter, setSubjectFilter] = useState('All subjects')
   const [todos, setTodos] = useState(() => readStoredValue(tasksStorageKey, []))
+  const [schedule, setSchedule] = useState(() => readStoredValue(scheduleStorageKey, []))
+  const [scheduleTitle, setScheduleTitle] = useState('')
+  const [scheduleRoom, setScheduleRoom] = useState('')
+  const [scheduleDay, setScheduleDay] = useState(scheduleDays[0])
+  const [scheduleStart, setScheduleStart] = useState('09:00')
+  const [scheduleEnd, setScheduleEnd] = useState('10:00')
+  const [scheduleError, setScheduleError] = useState('')
   const [focusStats, setFocusStats] = useState(() =>
     readStoredValue(statsStorageKey, { sessions: 0, minutes: 0 }),
   )
@@ -105,6 +137,10 @@ function Todos({ onLogout, theme, onToggleTheme }) {
   useEffect(() => {
     localStorage.setItem(tasksStorageKey, JSON.stringify(todos))
   }, [todos])
+
+  useEffect(() => {
+    localStorage.setItem(scheduleStorageKey, JSON.stringify(schedule))
+  }, [schedule])
 
   useEffect(() => {
     localStorage.setItem(statsStorageKey, JSON.stringify(focusStats))
@@ -202,6 +238,27 @@ function Todos({ onLogout, theme, onToggleTheme }) {
         completed: false,
       },
     ])
+  }
+
+  function addScheduleItem(event) {
+    event.preventDefault()
+    const title = scheduleTitle.trim()
+    if (!title) {
+      setScheduleError('Enter the subject name.')
+      return
+    }
+    if (!scheduleStart || !scheduleEnd || scheduleEnd <= scheduleStart) {
+      setScheduleError('Choose an end time after the start time.')
+      return
+    }
+
+    setSchedule((current) => [
+      ...current,
+      { id: crypto.randomUUID(), title, room: scheduleRoom.trim(), day: scheduleDay, start: scheduleStart, end: scheduleEnd },
+    ])
+    setScheduleTitle('')
+    setScheduleRoom('')
+    setScheduleError('')
   }
 
   function handleToggle(id) {
@@ -323,6 +380,13 @@ function Todos({ onLogout, theme, onToggleTheme }) {
 
   const activeCount = todos.filter((todo) => !isTaskComplete(todo)).length
   const completedCount = todos.length - activeCount
+  const sortedSchedule = [...schedule].sort((a, b) =>
+    scheduleDays.indexOf(a.day) - scheduleDays.indexOf(b.day) || a.start.localeCompare(b.start),
+  )
+  const scheduleTimeMarkers = Array.from(
+    { length: (scheduleTimelineEnd - scheduleTimelineStart) / 60 + 1 },
+    (_, index) => scheduleTimelineStart + index * 60,
+  )
   const completion = todos.length ? Math.round((completedCount / todos.length) * 100) : 0
   const availableSubjects = [...new Set(todos.map((todo) => todo.subject).filter(Boolean))]
   const visibleTodos = todos.filter((todo) => {
@@ -424,12 +488,7 @@ function Todos({ onLogout, theme, onToggleTheme }) {
           event.preventDefault()
           setActiveTab('home')
         }} aria-label="Daylight home">
-          <span className="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none">
-              <path d="M16 5.5c-1.6 4.1-5.8 5-5.8 10.1a5.8 5.8 0 1 0 11.6 0C21.8 10.5 17.6 9.6 16 5.5Z" fill="currentColor" />
-              <path d="M15.9 18.4c-2.6.1-4.1 1.8-4.4 4.1 2.8-.1 4.4-1.5 4.4-4.1Zm.2 0c2.6.1 4.1 1.8 4.4 4.1-2.8-.1-4.4-1.5-4.4-4.1Z" fill="#fff" />
-            </svg>
-          </span>
+          <img className="brand-logo" src="/daylight-logo.png" alt="Daylight Logo" />
           <span>daylight<span className="brand-period">.</span></span>
         </a>
         <p className="nav-section-label">STUDY SPACE</p>
@@ -707,6 +766,98 @@ function Todos({ onLogout, theme, onToggleTheme }) {
             </footer>
           )}
         </section>
+
+        {activeTab === 'home' && (
+          <section className="schedule-card" aria-label="Weekly school class schedule">
+            <div className="schedule-heading">
+              <div>
+                <p className="section-kicker">CLASS SCHEDULE</p>
+                <h2>My school schedule</h2>
+              </div>
+              <span>{schedule.length} {schedule.length === 1 ? 'class' : 'classes'}</span>
+            </div>
+            <form className="schedule-form expanded" onSubmit={addScheduleItem}>
+              <label className="schedule-title-field">
+                <span>Subject</span>
+                <input value={scheduleTitle} onChange={(event) => setScheduleTitle(event.target.value)} placeholder="e.g. Mathematics" maxLength={60} />
+              </label>
+              <label className="schedule-room-field">
+                <span>Room / location</span>
+                <input value={scheduleRoom} onChange={(event) => setScheduleRoom(event.target.value)} placeholder="e.g. Room 204" maxLength={40} />
+              </label>
+              <label>
+                <span>Day</span>
+                <select value={scheduleDay} onChange={(event) => setScheduleDay(event.target.value)}>
+                  {scheduleDays.map((day) => <option key={day} value={day}>{day}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>From</span>
+                <input type="time" value={scheduleStart} onChange={(event) => setScheduleStart(event.target.value)} />
+              </label>
+              <label>
+                <span>To</span>
+                <input type="time" value={scheduleEnd} onChange={(event) => setScheduleEnd(event.target.value)} />
+              </label>
+              <button type="submit">Add class</button>
+              {scheduleError && <p className="schedule-error" role="alert">{scheduleError}</p>}
+            </form>
+
+            <div className="schedule-map" aria-label="Weekly class schedule map">
+              <div className="schedule-time-axis">
+                <div className="schedule-map-heading schedule-time-heading"><strong>TIME</strong></div>
+                <div className="schedule-time-slots" style={{ height: scheduleTimelineHeight }}>
+                  {scheduleTimeMarkers.map((minutes) => (
+                    <span
+                      key={minutes}
+                      style={{ top: ((minutes - scheduleTimelineStart) / 60) * schedulePixelsPerHour }}
+                    >{formatScheduleMinutes(minutes)}</span>
+                  ))}
+                </div>
+              </div>
+              {scheduleDays.map((day) => {
+                const dayClasses = sortedSchedule.filter((item) => item.day === day)
+                return (
+                  <div className="schedule-map-day" key={day}>
+                    <div className="schedule-map-heading">
+                      <strong>{day.slice(0, 3)}</strong>
+                      <span>{dayClasses.length}</span>
+                    </div>
+                    <div className="schedule-map-classes schedule-day-canvas" style={{ height: scheduleTimelineHeight }}>
+                      {dayClasses.length ? dayClasses.map((item) => {
+                        const startMinutes = scheduleTimeToMinutes(item.start)
+                        const endMinutes = scheduleTimeToMinutes(item.end)
+                        const visibleStart = Math.max(startMinutes, scheduleTimelineStart)
+                        const visibleEnd = Math.min(endMinutes, scheduleTimelineEnd)
+                        const top = ((visibleStart - scheduleTimelineStart) / 60) * schedulePixelsPerHour
+                        const height = ((visibleEnd - visibleStart) / 60) * schedulePixelsPerHour
+
+                        if (height <= 0) return null
+                        return (
+                          <article
+                            className="schedule-class-block"
+                            key={item.id}
+                            style={{ top, height }}
+                          >
+                            <button
+                              type="button"
+                              className="schedule-class-remove"
+                              onClick={() => setSchedule((current) => current.filter((entry) => entry.id !== item.id))}
+                              aria-label={`Remove ${item.title} from schedule`}
+                            >×</button>
+                            <strong>{item.title}</strong>
+                            <span>{formatScheduleTime(item.start)}–{formatScheduleTime(item.end)}</span>
+                            {item.room && <small>{item.room}</small>}
+                          </article>
+                        )
+                      }) : <span className="schedule-map-empty">No classes</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
         {activeTab === 'home' && <aside className="sidebar">
           <section className="progress-card">

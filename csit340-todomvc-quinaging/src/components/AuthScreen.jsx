@@ -42,12 +42,7 @@ function AuthScreen({ onLogin }) {
     <main className="auth-page">
       <section className="auth-showcase">
         <a className="brand auth-brand" href="#" aria-label="Daylight home">
-          <span className="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none">
-              <path d="M16 5.5c-1.6 4.1-5.8 5-5.8 10.1a5.8 5.8 0 1 0 11.6 0C21.8 10.5 17.6 9.6 16 5.5Z" fill="currentColor" />
-              <path d="M15.9 18.4c-2.6.1-4.1 1.8-4.4 4.1 2.8-.1 4.4-1.5 4.4-4.1Zm.2 0c2.6.1 4.1 1.8 4.4 4.1-2.8-.1-4.4-1.5-4.4-4.1Z" fill="#fff" />
-            </svg>
-          </span>
+          <img className="brand-logo" src="/daylight-logo.png" alt="Daylight Logo" />
           <span>daylight<span className="brand-period">.</span></span>
         </a>
 
@@ -75,12 +70,7 @@ function AuthScreen({ onLogin }) {
       <section className="auth-panel">
         <div className="auth-panel-inner">
           <div className="auth-mobile-brand">
-            <span className="brand-mark" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <path d="M16 5.5c-1.6 4.1-5.8 5-5.8 10.1a5.8 5.8 0 1 0 11.6 0C21.8 10.5 17.6 9.6 16 5.5Z" fill="currentColor" />
-                <path d="M15.9 18.4c-2.6.1-4.1 1.8-4.4 4.1 2.8-.1 4.4-1.5 4.4-4.1Zm.2 0c2.6.1 4.1 1.8 4.4 4.1-2.8-.1-4.4-1.5-4.4-4.1Z" fill="#fff" />
-              </svg>
-            </span>
+            <img className="brand-logo" src="/daylight-logo.png" alt="Daylight Logo" />
             <span>daylight<span className="brand-period">.</span></span>
           </div>
 
