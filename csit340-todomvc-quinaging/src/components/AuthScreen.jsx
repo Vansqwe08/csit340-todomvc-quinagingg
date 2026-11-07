@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
-const ADMIN_EMAIL = 'admin@daylight.app'
-const ADMIN_PASSWORD = 'daylight-admin'
+const ADMIN_EMAIL = 'admin-tests'
+const ADMIN_PASSWORD = 'admin12345'
 
-function AuthScreen({ onLogin }) {
+function AuthScreen({ onLogin }) {s
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
