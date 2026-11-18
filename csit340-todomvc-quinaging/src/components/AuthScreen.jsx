@@ -13,10 +13,17 @@ function AuthScreen({ onLogin }) {
   async function handleLogin(event) {
     event.preventDefault()
     setMessage('')
+    const loginUsername = username.trim()
+    if (loginUsername.includes('@')) {
+      setMessage('Enter the username you chose during registration, not your email address.')
+      setMessageType('error')
+      return
+    }
+
     try {
       const session = await apiRequest('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: loginUsername, password }),
       })
       saveSession(session)
       onLogin(session.user)
@@ -126,9 +133,9 @@ function AuthScreen({ onLogin }) {
                   </svg>
                   <input
                     type="text"
-                    name="username"
+                    name="login-username"
                     autoComplete="username"
-                    placeholder="Your username"
+                    placeholder="Your username (not email)"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     required
