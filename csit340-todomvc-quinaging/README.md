@@ -10,12 +10,22 @@ npm run dev
 
 The database is stored in `data/daylight.sqlite` and is ignored by Git. The API runs on port `3001`, and Vite proxies `/api` requests to it.
 
-The seeded administrator account is:
+The local SQLite database is seeded with this demo administrator account:
 
 - Username: `admin`
 - Password: `daylight-admin`
 
 Existing accounts are migrated automatically; their username is generated from the part of their email before `@`.
+
+## Deploying on Vercel
+
+The local SQLite API is for development only. Vercel uses the serverless API functions in `api/` with Neon Postgres.
+
+1. Create a Neon Postgres project and copy its connection string.
+2. In Vercel, set the project **Root Directory** to `csit340-todomvc-quinaging`.
+3. Add `DATABASE_URL` to the Vercel project's Environment Variables and paste the Neon connection string. Do not commit this secret.
+4. Deploy or redeploy the project. Vercel creates the database tables automatically on the first API request.
+5. Register an account on the deployed site. The hosted database starts empty; local SQLite accounts and study data are not copied automatically.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
