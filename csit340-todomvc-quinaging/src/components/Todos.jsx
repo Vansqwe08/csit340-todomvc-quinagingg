@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import AmbientPlayer from './AmbientPlayer.jsx'
 import StudyTaskDrawer from './StudyTaskDrawer.jsx'
 import { AnalyticsView, CalendarView, ProfileView, SettingsView } from './StudyViews.jsx'
+import { apiRequest } from '../api.js'
 
 const filters = ['All tasks', 'In progress', 'Completed']
 const subjects = ['Mathematics', 'Science', 'Reading', 'Writing', 'History', 'Other']
@@ -90,15 +91,15 @@ function isTaskComplete(task) {
   return task.completed || (subtasks.length > 0 && subtasks.every((subtask) => subtask.completed))
 }
 
-function Todos({ onLogout, theme, onToggleTheme }) {
+function Todos({ onLogout, theme, onToggleTheme, initialState }) {
   const [text, setText] = useState('')
   const [subject, setSubject] = useState(subjects[0])
   const [dueDate, setDueDate] = useState('')
   const [filter, setFilter] = useState('All tasks')
   const [query, setQuery] = useState('')
   const [subjectFilter, setSubjectFilter] = useState('All subjects')
-  const [todos, setTodos] = useState(() => readStoredValue(tasksStorageKey, []))
-  const [schedule, setSchedule] = useState(() => readStoredValue(scheduleStorageKey, []))
+  const [todos, setTodos] = useState(() => initialState?.todos ?? readStoredValue(tasksStorageKey, []))
+  const [schedule, setSchedule] = useState(() => initialState?.schedule ?? readStoredValue(scheduleStorageKey, []))
   const [scheduleTitle, setScheduleTitle] = useState('')
   const [scheduleRoom, setScheduleRoom] = useState('')
   const [scheduleDay, setScheduleDay] = useState(scheduleDays[0])
@@ -106,7 +107,7 @@ function Todos({ onLogout, theme, onToggleTheme }) {
   const [scheduleEnd, setScheduleEnd] = useState('10:00')
   const [scheduleError, setScheduleError] = useState('')
   const [focusStats, setFocusStats] = useState(() =>
-    readStoredValue(statsStorageKey, { sessions: 0, minutes: 0 }),
+    initialState?.focusStats ?? readStoredValue(statsStorageKey, { sessions: 0, minutes: 0 }),
   )
   const [focusLength, setFocusLength] = useState(25)
   const [breakLength, setBreakLength] = useState(5)
@@ -118,12 +119,14 @@ function Todos({ onLogout, theme, onToggleTheme }) {
   const secondsRemainingRef = useRef(25 * 60)
   const [isFocusRunning, setIsFocusRunning] = useState(false)
   const [studyTipIndex, setStudyTipIndex] = useState(0)
-  const [streak, setStreak] = useState(() => readStoredValue(streakStorageKey, { days: 0, lastStudiedDate: '' }))
+  const [streak, setStreak] = useState(() =>
+    initialState?.streak ?? readStoredValue(streakStorageKey, { days: 0, lastStudiedDate: '' }),
+  )
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [celebrationKey, setCelebrationKey] = useState(0)
   const [activeTab, setActiveTab] = useState('home')
   const [profile, setProfile] = useState(() => {
-    const savedProfile = readStoredValue(profileStorageKey, {})
+    const savedProfile = initialState?.profile ?? readStoredValue(profileStorageKey, {})
     return {
       ...emptyProfile,
       ...savedProfile,
@@ -136,18 +139,22 @@ function Todos({ onLogout, theme, onToggleTheme }) {
 
   useEffect(() => {
     localStorage.setItem(tasksStorageKey, JSON.stringify(todos))
+    apiRequest('/api/state', { method: 'PUT', body: JSON.stringify({ todos }) }).catch(() => {})
   }, [todos])
 
   useEffect(() => {
     localStorage.setItem(scheduleStorageKey, JSON.stringify(schedule))
+    apiRequest('/api/state', { method: 'PUT', body: JSON.stringify({ schedule }) }).catch(() => {})
   }, [schedule])
 
   useEffect(() => {
     localStorage.setItem(statsStorageKey, JSON.stringify(focusStats))
+    apiRequest('/api/state', { method: 'PUT', body: JSON.stringify({ focusStats }) }).catch(() => {})
   }, [focusStats])
 
   useEffect(() => {
     localStorage.setItem(streakStorageKey, JSON.stringify(streak))
+    apiRequest('/api/state', { method: 'PUT', body: JSON.stringify({ streak }) }).catch(() => {})
   }, [streak])
 
   useEffect(() => {
@@ -442,6 +449,10 @@ function Todos({ onLogout, theme, onToggleTheme }) {
     }
     try {
       localStorage.setItem(profileStorageKey, JSON.stringify(nextProfile))
+      apiRequest('/api/state', {
+        method: 'PUT',
+        body: JSON.stringify({ profile: nextProfile }),
+      }).catch(() => {})
       setPhotoError('')
     } catch {
       setPhotoError('Profile could not be saved in this browser. Try a smaller picture or remove the current photo.')

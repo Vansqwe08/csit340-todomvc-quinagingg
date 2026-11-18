@@ -164,7 +164,7 @@ function SettingsView({ theme, onToggleTheme, name, onNameChange }) {
         </div>
         <div className="settings-note">
           <span aria-hidden="true">✦</span>
-          <p>Your tasks, focus sessions, streak, and theme are saved in this browser.</p>
+          <p>Your tasks, focus sessions, streak, and theme are saved to your Daylight database.</p>
         </div>
       </div>
     </section>

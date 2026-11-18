@@ -1,5 +1,22 @@
 # React + Vite
 
+## Daylight database
+
+Run the website and SQLite API together:
+
+```bash
+npm run dev
+```
+
+The database is stored in `data/daylight.sqlite` and is ignored by Git. The API runs on port `3001`, and Vite proxies `/api` requests to it.
+
+The seeded administrator account is:
+
+- Username: `admin`
+- Password: `daylight-admin`
+
+Existing accounts are migrated automatically; their username is generated from the part of their email before `@`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

@@ -1,35 +1,45 @@
 import { useState } from 'react'
-
-const ADMIN_EMAIL = 'admin@daylight.app'
-const ADMIN_PASSWORD = 'daylight-admin'
+import { apiRequest, saveSession } from '../api.js'
 
 function AuthScreen({ onLogin }) {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('')
 
-  function handleLogin(event) {
+  async function handleLogin(event) {
     event.preventDefault()
-
-    if (
-      email.trim().toLowerCase() === ADMIN_EMAIL &&
-      password === ADMIN_PASSWORD
-    ) {
-      onLogin()
-      return
+    setMessage('')
+    try {
+      const session = await apiRequest('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      })
+      saveSession(session)
+      onLogin(session.user)
+    } catch (error) {
+      setMessage(error.message)
+      setMessageType('error')
     }
-
-    setMessage('That email and password do not match the demo admin account.')
-    setMessageType('error')
   }
 
-  function handleRegister(event) {
+  async function handleRegister(event) {
     event.preventDefault()
-    setMessage('Registration is disabled in this demo. Your details were not saved; only the admin account can sign in.')
-    setMessageType('notice')
+    setMessage('')
+    try {
+      const session = await apiRequest('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, username, email, password }),
+      })
+      saveSession(session)
+      onLogin(session.user)
+    } catch (error) {
+      setMessage(error.message)
+      setMessageType('error')
+    }
   }
 
   function changeMode(nextMode) {
@@ -108,19 +118,19 @@ function AuthScreen({ onLogin }) {
           {mode === 'login' ? (
             <form className="auth-form" onSubmit={handleLogin}>
               <label className="auth-field">
-                <span>Email address</span>
+                <span>Username</span>
                 <span className="auth-input-wrap">
                   <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <rect x="2.7" y="4.3" width="14.6" height="11.4" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                    <path d="m3.7 5.5 6.3 5.1 6.3-5.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="10" cy="6.3" r="3" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M4.2 16.4c.4-2.6 2.5-4.1 5.8-4.1s5.4 1.5 5.8 4.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                   <input
-                    type="email"
-                    name="email"
+                    type="text"
+                    name="username"
                     autoComplete="username"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="Your username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
                     required
                   />
                 </span>
@@ -173,6 +183,29 @@ function AuthScreen({ onLogin }) {
               </label>
 
               <label className="auth-field">
+                <span>Username</span>
+                <span className="auth-input-wrap">
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <circle cx="10" cy="6.3" r="3" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M4.2 16.4c.4-2.6 2.5-4.1 5.8-4.1s5.4 1.5 5.8 4.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="text"
+                    name="registration-username"
+                    autoComplete="username"
+                    placeholder="Choose a username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    minLength={3}
+                    maxLength={30}
+                    pattern="[A-Za-z0-9_.-]+"
+                    title="Use 3-30 letters, numbers, dots, dashes, or underscores."
+                    required
+                  />
+                </span>
+              </label>
+
+              <label className="auth-field">
                 <span>Email address</span>
                 <span className="auth-input-wrap">
                   <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -190,19 +223,34 @@ function AuthScreen({ onLogin }) {
                   />
                 </span>
               </label>
-
-              <p className="registration-note">
-                Account creation is currently turned off. This demo only allows the administrator to sign in.
-              </p>
+              <label className="auth-field">
+                <span>Password</span>
+                <span className="auth-input-wrap">
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <rect x="4" y="8.5" width="12" height="8.5" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M6.7 8.5V6.2a3.3 3.3 0 0 1 6.6 0v2.3M10 11.8v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  <input
+                    type="password"
+                    name="registration-password"
+                    autoComplete="new-password"
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    minLength={6}
+                    required
+                  />
+                </span>
+              </label>
               {message && <p className={`auth-message ${messageType}`} role="status">{message}</p>}
               <button className="auth-submit" type="submit">
-                Request an account <span aria-hidden="true">→</span>
+                Create account <span aria-hidden="true">→</span>
               </button>
             </form>
           )}
 
           <p className="auth-legal">
-            Demo sign-in only. This front-end check is not secure authentication.
+            Your account and study data are saved in the Daylight SQLite database.
           </p>
         </div>
       </section>
